@@ -1,0 +1,43 @@
+{
+  "name": "react",
+  "version": "1.0.0",
+  "description": "React example starter project",
+  "keywords": [
+    "react",
+    "starter"
+  ],
+  "main": "src/index.js",
+  "dependencies": {
+    "@tensorflow-models/face-landmarks-detection": "0.0.3",
+    "@tensorflow/tfjs-backend-webgl": "3.5.0",
+    "@tensorflow/tfjs-converter": "3.5.0",
+    "@tensorflow/tfjs-core": "3.5.0",
+    "dat.gui": "^0.7.7",
+    "react": "17.0.0",
+    "react-dom": "17.0.0",
+    "react-scripts": "3.4.3",
+    "react-webcam": "5.2.1",
+    "rxjs": "^6.6.7",
+    "scatter-gl": "^0.0.8",
+    "stats.js": "0.17.0"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.4",
+    "@types/react-dom": "^17.0.3",
+    "@types/react-measure": "^2.0.6",
+    "react-measure": "^2.5.2",
+    "typescript": "3.8.3"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
+}
