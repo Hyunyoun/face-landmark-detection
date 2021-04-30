@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import "./App.css";
 // import * as tf from "@tensorflow/tfjs";
 import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection";
-// import { drawMesh } from "./face-renderer/meshUtilities.js";
+// import { drawMesh } from "./face-renderer/meshUtilities.tsx";
 import {timer, Subject, from, ReplaySubject, interval, AsyncSubject} from 'rxjs';
 import {filter, map, take, tap} from "rxjs/operators";
 import {catchError, mergeMap} from 'rxjs/operators';
@@ -18,13 +18,13 @@ const RED = "#FF2C35";
 const BLUE = "#157AB3";
 
 function isMobile() {
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  return isAndroid || isiOS;
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    return isAndroid || isiOS;
 }
 
 let model, ctx, videoWidth, videoHeight, video, canvas,
-  scatterGLHasInitialized = false, scatterGL, rafID, predictions;
+    scatterGLHasInitialized = false, scatterGL, rafID, predictions;
 
 const VIDEO_SIZE = 500;
 const mobile = isMobile();
@@ -33,31 +33,31 @@ const mobile = isMobile();
 const renderPointcloud = mobile === false;
 // const stats = new Stats();
 const state = {
-  backend: 'webgl',
-  maxFaces: 1,
-  triangulateMesh: true,
-  predictIrises: true
+    backend: 'webgl',
+    maxFaces: 1,
+    triangulateMesh: true,
+    predictIrises: true
 };
 
 const WEBCAM_CONSTRAINTS = {
-  audio: true,
-  video: { facingMode: "environment" },
+    audio: true,
+    video: { facingMode: "environment" },
 };
 
 
 const loadFaceLandmarksDetection = async () => {
-  const network = await faceLandmarksDetection.load(
-    faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
-    {
-      maxFaces: 1
-    }
-  );
-  return network
-  // console.log(network.estimateFaces());
-  // console.log(network.estimateFaces());
-  // setInterval(() => {
-  //   detectFace(network);
-  // }, 5000);
+    const network = await faceLandmarksDetection.load(
+        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
+        {
+            maxFaces: 1
+        }
+    );
+    return network
+    // console.log(network.estimateFaces());
+    // console.log(network.estimateFaces());
+    // setInterval(() => {
+    //   detectFace(network);
+    // }, 5000);
 };
 
 //
@@ -114,25 +114,25 @@ const loadFaceLandmarksDetection = async () => {
 // }
 
 const printPredictionData = (predictions) => {
-  console.log(`face predicted: ${predictions.length}`);
-  for (let i = 0; i < predictions.length; i++) {
-    const keyPoints = predictions[i].scaledMesh;
+    console.log(`face predicted: ${predictions.length}`);
+    for (let i = 0; i < predictions.length; i++) {
+        const keyPoints = predictions[i].scaledMesh;
 
-    // Log facial keypoints.
-    for (let i = 0; i < 5; i++) {  // keyPoints.length; i++) {
-      const [x, y, z] = keyPoints[i];
-      console.log(`Keypoint ${i}: [${x}, ${y}, ${z}]`);
+        // Log facial keypoints.
+        for (let i = 0; i < 5; i++) {  // keyPoints.length; i++) {
+            const [x, y, z] = keyPoints[i];
+            console.log(`Keypoint ${i}: [${x}, ${y}, ${z}]`);
+        }
     }
-  }
 }
 
 // video =
 // it's loaded
 const config = {
-  input: document.querySelector('video'),
-  returnTensors: false,
-  flipHorizontal: false,
-  predictIrises: false
+    input: document.querySelector('video'),
+    returnTensors: false,
+    flipHorizontal: false,
+    predictIrises: false
 }
 
 
@@ -193,10 +193,10 @@ const config = {
 // ).subscribe(result => printPredictionData(result));
 //
 const detectionModel = faceLandmarksDetection.load(
-  faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
-  {
-    maxFaces: 1
-  }
+    faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
+    {
+        maxFaces: 1
+    }
 );
 const observable = from(detectionModel);
 
@@ -214,23 +214,23 @@ const observable = from(detectionModel);
 
 const App = () => {
 
-  observable.pipe(
-    filter( () => {
-      const videoElement = document.querySelector('video');
-      console.log(videoElement);
-      return videoElement !== null && videoElement !== 'undefined' && videoElement.readyState === 4
-    }),
-    // filter(() => loaded === true),
-    // tap(() => console.log("Estimation start!!")),
-    mergeMap( result => result.estimateFaces(config)),
-  ).subscribe(result => printPredictionData(result));
+    observable.pipe(
+        filter( () => {
+            const videoElement = document.querySelector('video');
+            console.log(videoElement);
+            return videoElement !== null && videoElement !== 'undefined' && videoElement.readyState === 4
+        }),
+        // filter(() => loaded === true),
+        // tap(() => console.log("Estimation start!!")),
+        mergeMap( result => result.estimateFaces(config)),
+    ).subscribe(result => printPredictionData(result));
 
-  return (
-    <div className="App">
-      { Camera() }
-      <img className="animated-gif" src={logo} alt="loading..."/>
-    </div>
-  );
+    return (
+        <div className="App">
+            { Camera() }
+            <img className="animated-gif" src={logo} alt="loading..."/>
+        </div>
+    );
 }
 
 export default App;

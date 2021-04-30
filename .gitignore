@@ -19,3 +19,5 @@ npm-debug.log
 *.iml
 
 .module-cache
+
+src/image/

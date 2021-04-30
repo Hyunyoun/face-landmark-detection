@@ -1,16 +1,16 @@
 import { useState, useCallback } from "react";
 
 export const useCardRatio = (initialRatio: number) => {
-  const [aspectRatio, setAspectRatio] = useState(initialRatio);
+    const [aspectRatio, setAspectRatio] = useState(initialRatio);
 
-  const calculateRatio = useCallback((height, width) => {
-    if (height && width) {
-      const isLandscape = height <= width;
-      const ratio = isLandscape ? width / height : height / width;
+    const calculateRatio = useCallback((height, width) => {
+        if (height && width) {
+            const isLandscape = height <= width;
+            const ratio = isLandscape ? width / height : height / width;
 
-      setAspectRatio(ratio);
-    }
-  }, []);
+            setAspectRatio(ratio);
+        }
+    }, []);
 
-  return [aspectRatio, calculateRatio];
+    return [aspectRatio, calculateRatio];
 }

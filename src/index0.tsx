@@ -5,10 +5,10 @@ import Observe from "./ObserverTest";
 
 const rootElement = document.getElementById("root");
 ReactDOM.render(
-  <React.StrictMode>
-    {/*<Observe />*/}
-    <App />
-  </React.StrictMode>,
-  rootElement
+    <React.StrictMode>
+        {/*<Observe />*/}
+        <App />
+    </React.StrictMode>,
+    rootElement
 );
 
