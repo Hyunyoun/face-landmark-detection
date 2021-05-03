@@ -20,32 +20,33 @@ import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-backend-cpu';
 
 import {gui as dat} from "dat.gui";
-import {from, timer} from "rxjs";
-import {delay, filter, map, mergeMap, switchMap} from "rxjs/operators";
+import {forkJoin, from} from "rxjs";
+import {filter, mergeMap} from "rxjs/operators";
 import {ScatterGL} from "scatter-gl";
-import {streamVideo, drawPathToCanvas, ellipsing, scatterKeyPoints, loadDetectionModel} from "./face-renderer/renderer";
-import {useState} from "react";
+import {
+    streamVideo,
+    drawIrises,
+    scatterKeyPoints,
+    loadDetectionModel,
+    drawFaceContour, drawParts
+} from "./face-renderer/renderer";
+import {isMobile} from "./face-renderer/utils";
+import {MESH_ANNOTATIONS} from "@tensorflow-models/face-landmarks-detection/dist/mediapipe-facemesh/keypoints";
 
 require('@tensorflow/tfjs-backend-webgl');
 
 
 const GREEN = '#32EEDB';
-const RED = "#FF2C35";
-const BLUE = "#157AA0";
+// const RED = "#FF2C35";
+// const BLUE = "#157AA0";
 
-function isMobile() {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    return isAndroid || isiOS;
-}
-
-let model, ctx, video, canvas, scatterGL, rafID;
+let model, video, canvas, scatterGL, rafID;
 
 const VIDEO_SIZE = 600;
-const mobile = isMobile();
 // Don't render the point cloud on mobile in order to maximize performance and
 // to avoid crowding limited screen space.
-const renderPointcloud = mobile === false;
+const renderPointcloud = (isMobile() === false);
+
 
 const state = {
     backend: 'webgl',
@@ -56,16 +57,17 @@ const state = {
     scatterGLHasInitialized: false
 }
 
+
 const setupDatGui = () => {
     const gui = new dat.GUI();
 
-    const changeBackend = (backend) => {
+    const updateBackend = (backend) => {
         window.cancelAnimationFrame(rafID);
         from(tf.setBackend(backend))
             .subscribe(requestAnimationFrame(renderPrediction));
     }
     gui.add(state, 'backend', ['webgl'])
-        .onChange(changeBackend);
+        .onChange(updateBackend);
 
     gui.add(state, 'maxFaces', 1, 20, 1)
         .onChange(loadDetectionModel);
@@ -77,18 +79,19 @@ const setupDatGui = () => {
 
     gui.add(state, 'predictIrises');
 
+    const updateScatterDisplay = render => {
+        document.querySelector('#scatter-gl-container').style.display = render ? 'inline-block' : 'none';
+    }
     if (state.renderPointcloud) {
         gui.add(state, 'renderPointcloud')
-            .onChange(render => {
-                document.querySelector('#scatter-gl-container').style.display =
-                    render ? 'inline-block' : 'none';
-            });
+            .onChange(updateScatterDisplay);
     }
 }
 
 
-const setupCamera = () => {
+const initializeVideo = () => {
     video = document.getElementById('video');
+    const mobile = isMobile()
 
     const videoConstraints = {
         'audio': false,
@@ -110,29 +113,30 @@ const setupCamera = () => {
     });
 }
 
-const startVideoStream = () => {
-    video.play();
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-    video.width = videoWidth;
-    video.height = videoHeight;
-}
 
-
-const setupScatterCanvas = (videoElement) => {
+const setupVideoCanvas = (videoElement) => {
     canvas = document.getElementById('output');
-    canvas.width = videoElement.videoWidth;
+    canvas.width = 2 * videoElement.videoWidth;
     canvas.height = videoElement.videoHeight;
     const canvasContainer = document.querySelector('.canvas-wrapper');
     canvasContainer.style = `width: ${videoElement.videoWidth}px; height: ${videoElement.videoHeight}px`;
 
-    ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.fillStyle = GREEN;
-    ctx.strokeStyle = GREEN;
-    ctx.lineWidth = 0.5;
+    const context = canvas.getContext('2d');
+    context.translate(video.videoWidth, 0);
+    // context.translate(0.5*videoElement.videoWidth, 0);
+}
 
+
+const startVideoStream = (videoElement) => {
+    videoElement.play();
+    const videoWidth = videoElement.videoWidth;
+    const videoHeight = videoElement.videoHeight;
+    videoElement.width = videoWidth;
+    videoElement.height = videoHeight;
+}
+
+
+const setupScatterCanvas = () => {
     document.querySelector('#scatter-gl-container').style =
         `width: ${VIDEO_SIZE}px; height: ${VIDEO_SIZE}px;`;
 
@@ -150,21 +154,26 @@ const renderPrediction = () => {
         predictIrises: state.predictIrises
     }
 
-    console.log((new Date()).getMilliseconds()); // NEED TO REMOVE.
+    // console.log((new Date()).getMilliseconds()); // NEED TO REMOVE.
 
     from(model).pipe(
         mergeMap(result => result.estimateFaces(faceConfig)),
-        filter(result => result.length > 0)
+        filter(predictions => predictions.length > 0)
     )
         .subscribe(predictions => {
+            const context = canvas.getContext('2d');
+            context.fillStyle = GREEN;
+            context.fillRect(0, 0, 600, 600);
+
             /** stream the video **/
-            streamVideo(video, ctx, canvas);
+            streamVideo(video, context);
 
             /** draw key points based mesh image if needed **/
             predictions.forEach(prediction => {
                 const keyPoints = prediction.scaledMesh;
-                drawPathToCanvas(keyPoints, ctx, state);
-                ellipsing(keyPoints, ctx);
+                drawFaceContour(keyPoints, context, state);
+                // drawParts(keyPoints[MESH_ANNOTATIONS.leftEyeUpper0], context);
+                drawIrises(keyPoints, context);
             });
 
             /** scatter key points in 3D-axis layer if needed  **/
@@ -175,26 +184,22 @@ const renderPrediction = () => {
 };
 
 
-const main = async () =>  {
-    await tf.setBackend(state.backend);
+const MainCamera = () => {
     setupDatGui();
 
-    console.log("Start to setup camera.");
-    const completed = setupCamera();
+    from(
+        forkJoin(
+            [tf.setBackend(state.backend), initializeVideo()]
+        )
+    ).subscribe(() => {
+        setupVideoCanvas(video);
+        startVideoStream(video);
+        model = loadDetectionModel(state.maxFaces);
+        renderPrediction();
 
-    from(completed)
-        .subscribe(() => {
-            startVideoStream();
-            model = loadDetectionModel(state.maxFaces);
-            renderPrediction();
-
-            if (state.renderPointcloud)
-                setupScatterCanvas(video);
-        });
+        if (state.renderPointcloud)
+            setupScatterCanvas();
+    });
 }
 
-
-main();
-
-
-
+window.onload = MainCamera;
