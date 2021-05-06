@@ -1,160 +1,119 @@
-/**
- * @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * =============================================================================
- */
-
-import * as tf from '@tensorflow/tfjs-core';
-import '@tensorflow/tfjs-backend-webgl';
-import '@tensorflow/tfjs-backend-cpu';
-
-import {gui as dat} from "dat.gui";
-import {forkJoin, from} from "rxjs";
-import {filter, mergeMap} from "rxjs/operators";
-import {ScatterGL} from "scatter-gl";
+import React, {useEffect, useRef, useState} from "react";
+import {defer, from, interval} from "rxjs";
+import ReactDOM from "react-dom";
+import * as tf from "@tensorflow/tfjs-core";
 import {
-    streamVideo,
+    drawFaceContour,
     drawIrises,
-    scatterKeyPoints,
-    loadDetectionModel,
-    drawFaceContour, drawParts
+    drawPathToCanvas,
+    ellipsing,
+    loadDetectionModel, scatterKeyPoints, showFaceFuncs
 } from "./face-renderer/renderer";
-import {isMobile} from "./face-renderer/utils";
-import {MESH_ANNOTATIONS} from "@tensorflow-models/face-landmarks-detection/dist/mediapipe-facemesh/keypoints";
+import {filter, mergeMap, repeatWhen, switchMap} from "rxjs/operators";
+import Checkbox from "react-checkbox";
+import {
+    FaceMesh, FACEMESH_FACE_OVAL, FACEMESH_LEFT_EYE, FACEMESH_LEFT_EYEBROW, FACEMESH_LIPS,
+    FACEMESH_RIGHT_EYE,
+    FACEMESH_RIGHT_EYEBROW,
+    FACEMESH_TESSELATION,
+    Results
+} from "@mediapipe/face_mesh";
+import {drawConnectors} from "@mediapipe/drawing_utils";
+import PixelPart from "./pixel";
+
 
 require('@tensorflow/tfjs-backend-webgl');
 
 
-const GREEN = '#32EEDB';
-// const RED = "#FF2C35";
-// const BLUE = "#157AA0";
+const onResults = (results) => {
+    const canvasElement = document.getElementById('output');
+    const canvasCtx = canvasElement.getContext('2d');
 
-let model, video, canvas, scatterGL, rafID;
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-const VIDEO_SIZE = 600;
-// Don't render the point cloud on mobile in order to maximize performance and
-// to avoid crowding limited screen space.
-const renderPointcloud = (isMobile() === false);
-
-
-const state = {
-    backend: 'webgl',
-    maxFaces: 1,
-    triangulateMesh: true,
-    predictIrises: true,
-    renderPointcloud: renderPointcloud,
-    scatterGLHasInitialized: false
-}
-
-
-const setupDatGui = () => {
-    const gui = new dat.GUI();
-
-    const updateBackend = (backend) => {
-        window.cancelAnimationFrame(rafID);
-        from(tf.setBackend(backend))
-            .subscribe(requestAnimationFrame(renderPrediction));
-    }
-    gui.add(state, 'backend', ['webgl'])
-        .onChange(updateBackend);
-
-    gui.add(state, 'maxFaces', 1, 20, 1)
-        .onChange(loadDetectionModel);
-    // gui.add(state, 'maxFaces', 1, 20, 1).onChange(async val => {
-    //   model = await loadDetectionModel(val);
-    // });
-
-    gui.add(state, 'triangulateMesh');
-
-    gui.add(state, 'predictIrises');
-
-    const updateScatterDisplay = render => {
-        document.querySelector('#scatter-gl-container').style.display = render ? 'inline-block' : 'none';
-    }
-    if (state.renderPointcloud) {
-        gui.add(state, 'renderPointcloud')
-            .onChange(updateScatterDisplay);
-    }
-}
-
-
-const initializeVideo = () => {
-    video = document.getElementById('video');
-    const mobile = isMobile()
-
-    const videoConstraints = {
-        'audio': false,
-        'video': {
-            facingMode: 'user',
-            width: mobile ? undefined : VIDEO_SIZE,
-            height: mobile ? undefined : VIDEO_SIZE
+    if (results.multiFaceLandmarks) {
+        for (const landmarks of results.multiFaceLandmarks) {
+            drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {color: '#C0C0C070', lineWidth: 1});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, {color: '#FF3030'});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, {color: '#FF3030'});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, {color: '#30FF30'});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, {color: '#30FF30'});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, {color: '#E0E0E0'});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, {color: '#E0E0E0'});
         }
     }
+    canvasCtx.restore();
+}
 
-    from(navigator.mediaDevices.getUserMedia(videoConstraints))
-        .subscribe(stream => {
-            video.srcObject = stream;
-            console.log("attached stream to video.");
-        });
 
-    return new Promise((resolve) => {
-        video.onloadedmetadata = () => resolve(video)
+
+const GREEN = '#32EEDB';
+
+const WIDTH = 1280;
+const HEIGHT = 720;
+
+
+// const state = {
+//     backend: 'webgl',
+//     maxFaces: 1,
+//     triangulateMesh: true,
+//     predictIrises: true,
+//     renderPointcloud: true,
+//     scatterGLHasInitialized: false
+// }
+
+
+const defaultVideoConstraints = {
+    'audio': false,
+    'video': {
+        facingMode: 'user',
+        width: WIDTH,
+        height: HEIGHT
+    }
+}
+
+
+const getMedia = (webcamRef, setFunc) => {
+    from(
+        navigator.mediaDevices.getUserMedia(defaultVideoConstraints)
+    )
+    .subscribe({
+        next: (stream) => {
+            webcamRef.current.srcObject = stream;
+            webcamRef.current.play();
+            setFunc(true);
+        },
+        error: err => {
+            console.error(err);
+        }
     });
 }
 
-
-const setupVideoCanvas = (videoElement) => {
-    canvas = document.getElementById('output');
-    canvas.width = 2 * videoElement.videoWidth;
-    canvas.height = videoElement.videoHeight;
+const setupCanvas = () => {
     const canvasContainer = document.querySelector('.canvas-wrapper');
-    canvasContainer.style = `width: ${videoElement.videoWidth}px; height: ${videoElement.videoHeight}px`;
+    canvasContainer.style = `width: ${defaultVideoConstraints.video.width}px; height: ${defaultVideoConstraints.video.width}px`;
+
+    const canvas = document.getElementById('output');
+    canvas.width = defaultVideoConstraints.video.width;
+    canvas.height = defaultVideoConstraints.video.height;
 
     const context = canvas.getContext('2d');
-    context.translate(video.videoWidth, 0);
-    // context.translate(0.5*videoElement.videoWidth, 0);
+    context.fillStyle = GREEN;
+    context.fillRect(0, 0, 100, 100);
 }
 
 
-const startVideoStream = (videoElement) => {
-    videoElement.play();
-    const videoWidth = videoElement.videoWidth;
-    const videoHeight = videoElement.videoHeight;
-    videoElement.width = videoWidth;
-    videoElement.height = videoHeight;
-}
+const estimateFaceContour = (webcamRef, model, config) => {
+    const canvas = document.getElementById('output');
 
-
-const setupScatterCanvas = () => {
-    document.querySelector('#scatter-gl-container').style =
-        `width: ${VIDEO_SIZE}px; height: ${VIDEO_SIZE}px;`;
-
-    scatterGL = new ScatterGL(
-        document.querySelector('#scatter-gl-container'),
-        {'rotateOnStart': false, 'selectEnabled': false});
-}
-
-
-const renderPrediction = () => {
     const faceConfig = {
-        input: video,
+        input: webcamRef.current,
         returnTensors: false,
         flipHorizontal: false,
-        predictIrises: state.predictIrises
+        predictIrises: config.predictIrises
     }
-
-    // console.log((new Date()).getMilliseconds()); // NEED TO REMOVE.
 
     from(model).pipe(
         mergeMap(result => result.estimateFaces(faceConfig)),
@@ -163,43 +122,202 @@ const renderPrediction = () => {
         .subscribe(predictions => {
             const context = canvas.getContext('2d');
             context.fillStyle = GREEN;
-            context.fillRect(0, 0, 600, 600);
-
-            /** stream the video **/
-            streamVideo(video, context);
+            context.fillRect(0, 0, WIDTH, HEIGHT);
 
             /** draw key points based mesh image if needed **/
             predictions.forEach(prediction => {
+                console.log(prediction.scaledMesh.length);
+                const mesh = prediction.mesh;
+                const box = prediction.boundingBox;
                 const keyPoints = prediction.scaledMesh;
-                drawFaceContour(keyPoints, context, state);
-                // drawParts(keyPoints[MESH_ANNOTATIONS.leftEyeUpper0], context);
+                drawFaceContour(keyPoints, context, config);
                 drawIrises(keyPoints, context);
+                showFaceFuncs(keyPoints, box, context);
             });
 
-            /** scatter key points in 3D-axis layer if needed  **/
-            scatterKeyPoints(predictions, state, scatterGL);
+            // /** scatter key points in 3D-axis layer if needed  **/
+            // scatterKeyPoints(predictions, state, scatterGL);
         });
 
-    rafID = requestAnimationFrame(renderPrediction);
+    // rafID = requestAnimationFrame(renderPrediction);
 };
 
 
-const MainCamera = () => {
-    setupDatGui();
+const NewApp = () => {
+    let baseConfig = {
+        backend: 'webgl',
+        maxFaces: 1,
+        fps: 2,
+        triangulateMesh: false,
+        predictIrises: true,
+        renderPointcloud: true,
+        scatterGLHasInitialized: false
+    }
+    const [preLoaded, setPreLoaded] = useState(false);
+    const [videoLoaded, setVideoLoaded] = useState(false);
+    const [config, setConfig] = useState(baseConfig);
 
-    from(
-        forkJoin(
-            [tf.setBackend(state.backend), initializeVideo()]
-        )
-    ).subscribe(() => {
-        setupVideoCanvas(video);
-        startVideoStream(video);
-        model = loadDetectionModel(state.maxFaces);
-        renderPrediction();
+    const webcamRef = useRef(null);
 
-        if (state.renderPointcloud)
-            setupScatterCanvas();
+    // const model = loadDetectionModel(config.maxFaces);
+    const faceMesh = new FaceMesh();
+
+    faceMesh.setOptions({
+        selfieMode: false,
+        maxNumFaces: 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
     });
+    // faceMesh.onResults(onResults);
+
+    const handleChange = (event) => {
+        setConfig({...config, [event.target.name] : event.target.checked });
+    }
+
+    const checkBoxes = [
+        {
+            name: 'triangulateMesh',
+            key: 'triangulateMesh',
+            label: 'Triangulate Mesh',
+        },
+        {
+            name: 'predictIrises',
+            key: 'predictIrises',
+            label: 'Predict Irises',
+        }
+    ];
+
+    /** Preprocessing **/
+    useEffect(
+        () => {
+            from(tf.setBackend(config.backend))
+                .subscribe(() => setPreLoaded(true));
+
+            setupCanvas();
+            console.log(`Setup Canvas`);
+        },
+        []
+    );
+
+    useEffect(
+        () => {
+            if (!preLoaded)
+                return;
+
+            getMedia(webcamRef, setVideoLoaded);
+            console.log(`Video On!`);
+        },
+        [preLoaded]
+    );
+
+    useEffect(
+        () => {
+            if (!videoLoaded)
+                return;
+
+            const intervalInMilli = Math.round(1000 / config.fps);
+
+            console.log(`Start to subscribe`);
+            const subscription = interval(intervalInMilli)
+                .pipe(
+                    mergeMap(() => faceMesh.send({image: webcamRef.current.src}))
+                    // mergeMap(() => faceMesh.estimateFaces({
+                    //     input: webcamRef.current,
+                    //     returnTensors: false,
+                    //     flipHorizontal: false,
+                    //     predictIrises: config.predictIrises
+                    // }))
+                )
+                .subscribe(
+                    (result) => {
+                        console.log(result);
+                        console.log('a');
+                        onResults(result);
+                        //estimateFaceContour(webcamRef, model, config);
+                        console.log('b');
+                    }
+                );
+            return () => {
+                subscription.unsubscribe();
+                console.log("unsubscribed");
+            }
+
+        },
+        [videoLoaded, config]
+    );
+
+    // useEffect(() => {
+    //     console.log("checkedItems: ", config);
+    // }, [config]);
+
+    return (
+        <div className="container">
+            {/*<Checkbox name="triangulateMesh" checked={checkedItems["triangulateMesh"]} onChange={handleChange}/>*/}
+            {/*<Checkbox name="predictIrises" checked={checkedItems["predictIrises"]} onChange={handleChange}/>*/}
+            {/*<p>FPS</p>*/}
+            {/*<input type="range" min="2" max="20" step="2" value={config.fps} className="slider" id="fpsRange" onChange={handleChange} />*/}
+            {/*<p />*/}
+
+            <div className="canvas-wrapper">
+                <video id='webcam' ref={webcamRef} />
+                <canvas id='output'/>
+            </div>
+        </div>
+    );
 }
 
-window.onload = MainCamera;
+//
+// const CheckboxExample = () => {
+//     const [checkedItems, setCheckedItems] = useState({}); //plain object as state
+//
+//     const handleChange = (event) => {
+//         // updating an object instead of a Map
+//         setCheckedItems({...checkedItems, [event.target.name] : event.target.checked });
+//     }
+//
+//     useEffect(() => {
+//         console.log("checkedItems: ", checkedItems);
+//     }, [checkedItems]);
+//
+//     const checkboxes = [
+//         {
+//             name: 'check-box-1',
+//             key: 'checkBox1',
+//             label: 'Check Box 1',
+//         },
+//         {
+//             name: 'check-box-2',
+//             key: 'checkBox2',
+//             label: 'Check Box 2',
+//         }
+//     ];
+//
+//
+//     return (
+//         <div>
+//             <lable>Checked item name : {checkedItems["check-box-1"]} </lable> <br/>
+//             {
+//                 checkboxes.map(item => (
+//                     <label key={item.key}>
+//                         {item.name}
+//                         <Checkbox name={item.name} checked={checkedItems[item.name]} onChange={handleChange} />
+//                     </label>
+//                 ))
+//             }
+//         </div>
+//     );
+// }
+
+
+export default NewApp;
+
+
+const rootElement = document.getElementById("cameraRoot");
+ReactDOM.render(
+    <React.StrictMode>
+        {/*<CheckboxExample />*/}
+        <NewApp />
+        <PixelPart />
+    </React.StrictMode>,
+    rootElement
+);
