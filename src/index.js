@@ -10,7 +10,7 @@ import {
     loadDetectionModel, scatterKeyPoints, showFaceFuncs
 } from "./face-renderer/renderer";
 import {filter, mergeMap, repeatWhen, switchMap} from "rxjs/operators";
-import Checkbox from "react-checkbox";
+// import Checkbox from "react-checkbox";
 import {
     FaceMesh, FACEMESH_FACE_OVAL, FACEMESH_LEFT_EYE, FACEMESH_LEFT_EYEBROW, FACEMESH_LIPS,
     FACEMESH_RIGHT_EYE,
@@ -19,7 +19,7 @@ import {
     Results
 } from "@mediapipe/face_mesh";
 import {drawConnectors} from "@mediapipe/drawing_utils";
-import PixelPart from "./pixel";
+import PixelCharacterRenderer from "./pixel";
 
 
 require('@tensorflow/tfjs-backend-webgl');
@@ -316,8 +316,8 @@ const rootElement = document.getElementById("cameraRoot");
 ReactDOM.render(
     <React.StrictMode>
         {/*<CheckboxExample />*/}
-        <NewApp />
-        <PixelPart />
+        {/*<NewApp />*/}
+        <PixelCharacterRenderer />
     </React.StrictMode>,
     rootElement
 );

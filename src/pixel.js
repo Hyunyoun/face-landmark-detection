@@ -1,101 +1,86 @@
 import React, {useEffect, useRef, useState} from "react";
 import {forkJoin} from "rxjs";
-import {createCanvas, loadImage} from "canvas";
+import {loadImage} from "canvas";
+import {getTraitUrl} from "./cryptopunks";
 
-const RED = "#FF2C35";
 
-
-const setupPixelCanvas = () => {
-    const canvasConfig = {
-        width: 1600,
-        height: 900
-    }
-
-    const canvasContainer = document.querySelector('.canvas-wrapper2');
-    canvasContainer.style = `width: ${canvasConfig.width}px; height: ${canvasConfig.width}px`;
-
-    const canvas = document.getElementsByClassName('pixel-canvas').item(0);
-    // const canvasWidth = canvasConfig.width;
-    // canvas.width = canvasWidth;
-    // canvas.height = canvasConfig.height;
-
-    const context = canvas.getContext('2d');
-    context.fillStyle = RED;
-    context.fillRect(0, 0, canvas.width, canvas.height);
+const initializeCanvas = (canvasRef) => {
+    // const canvasConfig = {
+    //     width: 1000,
+    //     height: 500
+    // }
+    canvasRef = document.getElementsByClassName('pixel-canvas').item(0);
 }
 
-
-const loadImages = () => {
-    let jarOfPromise = [];
-    let traitImageCollections = {};
+const loadImages = (imagesRef) => {
+    let imagePromises = [];
     const traits = [
-        'ApeFace', 'ApeEyeShadow', 'ApeLeftEyeball', 'ApeRightEyeball',
-        'ApeLeftPupil', 'ApeRightPupil', 'ApeLeftEyelid', 'ApeRightEyelid',
-        'ApeNose', 'ApeMouth', 'ApeKnittedCap'
+        'ApeFace', 'ApeEyeShadow', 'ApeEyeballs', 'ApeEyes',
+        'ApeNose', 'ApeKnittedCap'
     ]
-    const path = require('path');
-    console.log(path.join(__dirname, '../'));
 
     traits.forEach(trait => {
-        const srcPath = `./image/trait/Ape/${trait}.png`;
-        console.log(srcPath);
-        jarOfPromise.push(
+        const srcPath = getTraitUrl(trait);
+        // const srcPath = `./image/trait/Ape/${trait}.jpeg`;
+        imagePromises.push(
             loadImage(srcPath)
         );
-        //     new Promise((resolve, reject) => {
-        //         traitImageCollections[trait] = new Image();
-        //         traitImageCollections[trait].src = srcPath;
-        //         // console.log(traitImageCollections[trait]);
-        //         traitImageCollections[trait].addEventListener('load', function () {
-        //             resolve(true);
-        //         });
-        //     })
-        // )
     });
 
-    return jarOfPromise
+    imagesRef.current = imagePromises
 }
 
-const PixelPart = () => {
-    const canvasRef = useRef(null);
-    const [canvasLoad, setCanvasLoad] = useState(false);
+const drawTraits = (images, location, canvasElement) => {
+    const canvasCtx = canvasElement.getContext('2d')
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-    // useEffect(
-    //     () => {
-    //         setupPixelCanvas();
-    //         setCanvasLoad(true);
-    //     },
-    //     []
-    // );
+    images.forEach(image => {
+        const scale = 2  // canvasElement.height / image.width
+        canvasCtx.drawImage(image, location.x, location.y, scale * image.width, scale * image.height);
+    })
+}
+
+const PixelCharacterRenderer = () => {
+    const canvasRef = useRef()
+    const imagesRef = useRef([])
+    const [location, setLocation] = useState({x: 0, y: 0})
+
+    /** Initialize **/
+    useEffect(
+        () => {
+            initializeCanvas()
+            loadImages(imagesRef)
+        },
+        []
+    )
 
     useEffect(
         () => {
             if (!canvasRef.current)
                 return;
 
-            setupPixelCanvas();
-
-            const canvasElement = canvasRef.current;
-            const canvasCtx = canvasElement.getContext('2d');
-
-            forkJoin(loadImages())
-                .subscribe( images => {
-                    console.log(images);
-                    images.forEach(image => {
-                        console.log(image.src);
-                        canvasCtx.drawImage(image, 0, 0, canvasElement.width, canvasElement.height);
-                    })
+            forkJoin(imagesRef.current)
+                .subscribe({
+                    next: images => drawTraits(images, location, canvasRef.current),
+                    error: err => console.error(err)
                 });
         },
-        []
-
+        [location]
     );
 
+    const handleCanvasClick = (e) => {
+        setLocation({ x: e.clientX, y: e.clientY })
+    }
+
     return (
-        <div className="canvas-wrapper2">
-            <canvas ref={canvasRef} className="pixel-canvas"/>
-        </div>
+        <canvas
+            ref={canvasRef}
+            width={window.innerWidth}
+            height={window.innerHeight}
+            onClick={handleCanvasClick}
+            className="pixel-canvas"
+        />
     );
 }
 
-export default PixelPart;
+export default PixelCharacterRenderer;
