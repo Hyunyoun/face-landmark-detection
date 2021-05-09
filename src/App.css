@@ -14,3 +14,8 @@ img.animated-gif{
   /*image-rendering: crisp-edges;*/
   image-rendering: pixelated;
 }
+
+/*webcam {*/
+/*  -webkit-transform: scaleX(-1);*/
+/*  transform: scaleX(-1);*/
+/*}*/

@@ -29,8 +29,8 @@ import {
     scatterKeyPoints,
     loadDetectionModel,
     drawFaceContour, isLeftEyeBlink, isRightEyeBlink, showFaceFuncs
-} from "./face-renderer/renderer";
-import {isMobile} from "./face-renderer/utils";
+} from "./tfjs/estimator";
+import {isMobile} from "./tfjs/utils";
 import React, {useEffect, useRef, useState} from "react";
 import * as ReactDOM from "react-dom";
 import {render} from "react-dom";
