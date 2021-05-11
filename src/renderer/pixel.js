@@ -124,6 +124,13 @@ const loadBackgroundImage = (gifRef, setFunc) => {
         .then(gif => decompressFrames(gif, true))
 
     gifRef.current = from(promisedGif)
+        .pipe(
+            // make observable to emit each element of the array (not the whole array)
+            mergeMap((x) => from(x)),
+            // delay each element by 1 sec
+            concatMap(x => of(x).pipe(delay(x.delay * 2)))
+        )
+
     setFunc(true)
 }
 
@@ -131,23 +138,16 @@ const loadBackgroundImage = (gifRef, setFunc) => {
 const showBackground = (gifObservable, canvasElement) => {
     console.log("reached here")
 
-    // Observable.create(obs => {
-    //     obs.next([1, 2, 3]);
-    //     obs.complete();
-    // })
+    const canvasCtx = canvasElement.getContext('2d')
 
-    Observable(obs => {
-            obs.next([1, 2, 3]);
-            obs.complete();
-        }
-    )
-        .pipe(
-            // make observable to emit each element of the array (not the whole array)
-            mergeMap((x) => from(x)),
-            // delay each element by 1 sec
-            concatMap(x => of(x).pipe(delay(1000)))
-        )
-        .subscribe(x => console.log(x));
+    gifObservable
+        .subscribe(x => {
+            console.log(x);
+            const imageData = new ImageData(x.patch, x.dims.width, x.dims.height);
+            canvasCtx.putImageData(imageData, 0, 0, 0, 0, 192*4, 108*4);
+
+        });
+
 
     //
     // gifObservable
@@ -192,9 +192,11 @@ const showBackground = (gifObservable, canvasElement) => {
 
 const PixelCharacterRenderer = () => {
     const canvasRef = useRef()
-    const backgroundCanvasRef = useRef()
     const imagesRef = useRef([])
-    const backgroundImageRef = useRef()
+
+    const backgroundCanvasRef = useRef()
+    const backgroundObservableRef = useRef()
+
     const [location, setLocation] = useState({x: 0, y: 0})
     const [loaded, setLoaded] = useState(false)
 
@@ -203,8 +205,8 @@ const PixelCharacterRenderer = () => {
         () => {
             if (!imagesRef.current)
                 loadImages(imagesRef)
-            if (!backgroundImageRef.current)
-                loadBackgroundImage(backgroundImageRef, setLoaded)
+            if (!backgroundObservableRef.current)
+                loadBackgroundImage(backgroundObservableRef, setLoaded)
         },
         []
     )
@@ -222,10 +224,10 @@ const PixelCharacterRenderer = () => {
 
     useEffect(
         () => {
-            if (!loaded || !backgroundCanvasRef.current || !backgroundImageRef.current)
+            if (!loaded || !backgroundCanvasRef.current || !backgroundObservableRef.current)
                 return
 
-            showBackground(backgroundImageRef.current, backgroundCanvasRef.current)
+            showBackground(backgroundObservableRef.current, backgroundCanvasRef.current)
         },
         [loaded]
     )
