@@ -9,7 +9,6 @@ import {ScatterGL} from "scatter-gl";
 import {Coord2D, Coord3D} from "@tensorflow-models/face-landmarks-detection/dist/mediapipe-facemesh/util";
 import {AnnotatedPrediction} from "@tensorflow-models/face-landmarks-detection/dist/mediapipe-facemesh";
 import {MESH_ANNOTATIONS} from "@tensorflow-models/face-landmarks-detection/dist/mediapipe-facemesh/keypoints";
-import {eye} from "@tensorflow/tfjs-core";
 
 
 const NUM_KEYPOINTS = 468;
@@ -148,6 +147,9 @@ export const drawIrises = (keyPoints: Coord3D[], context: CanvasRenderingContext
 
 
 const isEyeBlink = (keyPoints: Coord3D[], side: string) => {
+    if (keyPoints.length < NUM_KEYPOINTS + 2 * NUM_IRIS_KEYPOINTS)
+        return false
+
     let lowerEyePoints: Coord3D[];
     let upperEyePoints: Coord3D[];
     let irisPoints: Coord3D[];
@@ -163,20 +165,37 @@ const isEyeBlink = (keyPoints: Coord3D[], side: string) => {
 
     let eyelidDiff = 0;
     for (let i = 0; i < upperEyePoints.length; i++) {
-        eyelidDiff += (lowerEyePoints[i][1] - upperEyePoints[i][1]) / upperEyePoints.length;
+        eyelidDiff += distance(lowerEyePoints[i], upperEyePoints[i]) / upperEyePoints.length;
     }
     const irisRadius = 0.5 * distance(irisPoints[4], irisPoints[2]);
     return (eyelidDiff < 0.8 * irisRadius);
 }
 
 
-const isLeftEyeBlink = (keyPoints: Coord3D[]) => {
+export const isLeftEyeBlink = (keyPoints: Coord3D[]) => {
     return isEyeBlink(keyPoints, 'left');
 }
 
 
-const isRightEyeBlink = (keyPoints: Coord3D[]) => {
+export const isRightEyeBlink = (keyPoints: Coord3D[]) => {
     return isEyeBlink(keyPoints, 'right');
+}
+
+export const getEyePosition = (keyPoints: Coord3D[], side: string) => {
+    if (keyPoints.length < NUM_KEYPOINTS + 2 * NUM_IRIS_KEYPOINTS)
+        return 0
+
+    let lowerEyePoints: Coord3D[];
+    let irisPoints: Coord3D[];
+    if (side === 'left') {
+        lowerEyePoints = MESH_ANNOTATIONS.leftEyeLower0.map(i => keyPoints[i]);
+        irisPoints = keyPoints.slice(NUM_KEYPOINTS, NUM_KEYPOINTS + NUM_IRIS_KEYPOINTS);
+    } else {
+        lowerEyePoints = MESH_ANNOTATIONS.rightEyeLower0.map(i => keyPoints[i]);
+        irisPoints = keyPoints.slice(NUM_KEYPOINTS + NUM_IRIS_KEYPOINTS, NUM_KEYPOINTS + 2 * NUM_IRIS_KEYPOINTS);
+    }
+
+    return (distance(lowerEyePoints[0], irisPoints[0]) / distance(lowerEyePoints[0], lowerEyePoints[8]))
 }
 
 
