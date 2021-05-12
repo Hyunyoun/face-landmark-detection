@@ -15,7 +15,7 @@ import {
 } from "@mediapipe/face_mesh";
 import {drawConnectors} from "@mediapipe/drawing_utils";
 
-import {drawTraits, loadImages} from "./renderer/pixel";
+import {drawTraits, loadImages} from "./components/pixelCharacter";
 
 import {Camera} from "@mediapipe/camera_utils"
 

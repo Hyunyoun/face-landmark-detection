@@ -9,6 +9,8 @@ import {ScatterGL} from "scatter-gl";
 import {Coord2D, Coord3D} from "@tensorflow-models/face-landmarks-detection/dist/mediapipe-facemesh/util";
 import {AnnotatedPrediction} from "@tensorflow-models/face-landmarks-detection/dist/mediapipe-facemesh";
 import {MESH_ANNOTATIONS} from "@tensorflow-models/face-landmarks-detection/dist/mediapipe-facemesh/keypoints";
+import {from} from "rxjs";
+import {MutableRefObject} from "react";
 
 
 const NUM_KEYPOINTS = 468;
@@ -28,11 +30,17 @@ type State = {
 };
 
 
-export const loadDetectionModel = (maxFaces: number) => {
-    return faceLandmarksDetection.load(
+export const loadDetectionModel = (maxFaces: number, modelRef: MutableRefObject<any>) => {
+    console.log("load model")
+    modelRef.current = faceLandmarksDetection.load(
         faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
         {maxFaces: maxFaces}
     );
+    //
+    // const model = from(faceLandmarksDetection.load(
+    //     faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
+    //     {maxFaces: maxFaces}
+    // )).subscribe(observer => return observer)
 }
 
 

@@ -21,15 +21,6 @@ export interface CryptoPunkTraitImageSet {
     'Mouth': HTMLImageElement,
 }
 
-const getTraitName = (trait: string) => {
-    return `Ape${trait}`
-}
-
-export const getTraitUrl = (trait: string) => {
-    // const traitName = getTraitName(trait);
-    return `https://cryptopunk-test.s3.ap-northeast-2.amazonaws.com/Ape/${trait}.png`;
-}
-
 const sampleSet = {
     'Face': 'Face',
     'Eyeballs': 'Eyeballs',
@@ -39,24 +30,6 @@ const sampleSet = {
     'Mouth': 'Mouth'
 }
 
-
-export const loadCryptoPunk = (traits: CryptoPunkTraitSet, context: CanvasRenderingContext2D) => {
-    const traitImageSet = {};
-
-    // traits.keys
-
-    // traits.forEach( trait => {
-    //     const image = new Image();
-    //
-    // })
-
-
-    /** Face **/
-    const face = require(getTraitUrl(traits.Face));
-    const image = new Image();
-
-
-}
 
 //
 //

@@ -29,7 +29,7 @@ const loadBackgroundImage = (gifURL: string, gifRef: MutableRefObject<any>, setF
 }
 
 
-const showBackground = (gifObservable: Observable<ParsedFrame>, canvasElement: HTMLCanvasElement) => {
+const drawBackground = (gifObservable: Observable<ParsedFrame>, canvasElement: HTMLCanvasElement) => {
     const canvasCtx = canvasElement.getContext('2d')
     canvasCtx!!.imageSmoothingEnabled = false
 
@@ -48,7 +48,7 @@ const showBackground = (gifObservable: Observable<ParsedFrame>, canvasElement: H
 }
 
 
-const BackgroundRenderer = () => {
+const BackgroundApp = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const gifObservableRef = useRef<Observable<any>>(null)
 
@@ -70,7 +70,7 @@ const BackgroundRenderer = () => {
         () => {
             if (!gifLoaded || !canvasRef.current || !gifObservableRef.current)
                 return
-            showBackground(gifObservableRef.current, canvasRef.current)
+            drawBackground(gifObservableRef.current, canvasRef.current)
         },
         [gifLoaded]
     )
@@ -85,4 +85,4 @@ const BackgroundRenderer = () => {
     )
 }
 
-export default BackgroundRenderer
+export default BackgroundApp

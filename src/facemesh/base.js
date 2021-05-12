@@ -6,6 +6,7 @@ import {
     Results
 } from "@mediapipe/face_mesh";
 import {drawConnectors} from "@mediapipe/drawing_utils";
+import {Camera} from "@mediapipe/camera_utils";
 
 
 const videoElement = document.getElementsByClassName('input_video')[0];
@@ -52,4 +53,5 @@ const camera = new Camera(videoElement, {
     height: 720
 });
 
+console.log("SET!")
 camera.start();

@@ -4,7 +4,7 @@ import * as tf from "@tensorflow/tfjs-core";
 import {from, Subject} from 'rxjs';
 import {filter, mergeMap} from 'rxjs/operators';
 import {loadDetectionModel} from "./tfjs/estimator";
-import {drawTraits, loadImages} from "./renderer/pixel";
+import {drawTraits, loadImages} from "./components/pixelCharacter";
 
 require('@tensorflow/tfjs-backend-webgl');
 
@@ -39,7 +39,7 @@ const getModelConfig = (webcamObject) => {
         flipHorizontal: false,
         predictIrises: true
     }
-} 
+}
 
 
 const TfjsApp = () => {
@@ -84,6 +84,20 @@ const TfjsApp = () => {
         if (!webcamLoaded || !backendRef.current)
             return
 
+        // from(model.estimateFaces(getModelConfig(webcamRef.current)))
+        //     .pipe(
+        //         filter(predictions => predictions.length > 0)
+        //     ).subscribe({
+        //         next: predictions => {
+        //             predictions.forEach(newPrediction => setPrediction(newPrediction))
+        //         },
+        //         error: err => console.error(err),
+        //         complete: () => {}
+        //     })
+
+        // return () => subscription.unsubscribe()
+
+        console.log("Entered into getPredictions")
         const subscription = from(model)
             .pipe(
                 mergeMap(result => result.estimateFaces(getModelConfig(webcamRef.current))),

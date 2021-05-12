@@ -2,15 +2,15 @@ import React from "react";
 import * as ReactDOM from "react-dom";
 // import MediapipeApp from "./App";
 import TfjsApp from "./TfjsApp";
-import BackgroundRenderer from "./components/background";
+import BackgroundApp from "./components/background";
 
 
 const rootElement = document.getElementById("cameraRoot");
 ReactDOM.render(
     <React.StrictMode>
-        {/*<TfjsApp />*/}
+        <TfjsApp />
         {/*<MediapipeApp />*/}
-        <BackgroundRenderer />
+        <BackgroundApp />
     </React.StrictMode>,
     rootElement
 );
