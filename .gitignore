@@ -21,3 +21,7 @@ npm-debug.log
 .module-cache
 
 src/image/
+
+
+package-lock.json
+yarn.lock

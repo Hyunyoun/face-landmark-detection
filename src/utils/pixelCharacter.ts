@@ -1,22 +1,6 @@
-// import * as tf from "@tensorflow/tfjs";
 
 
-
-export const isMobile = () => {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    return isAndroid || isiOS;
-}
-
-export interface PixelFace {
-    /**
-     * The image to classify. Can be a tensor, DOM element image, video, or
-     * canvas.
-     */
-
-    // input: tf.Tensor3D|ImageData|HTMLVideoElement|HTMLImageElement|
-    //   HTMLCanvasElement;
-
+export interface PixelFaceInfo {
     /** Position of Body. [-1, 1] **/
     bodyPosition: number;
 
@@ -32,7 +16,6 @@ export interface PixelFace {
 
     /** Mouth Shape **/
     mouthShape: MouthShape; /** Another Interface **/
-
 }
 
 
@@ -59,3 +42,4 @@ export enum TraitType {
     MOUTH = 'mouth',
     EYEBROW = 'eyebrow'
 }
+

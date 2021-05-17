@@ -4,7 +4,7 @@ import {forkJoin, from} from "rxjs";
 //     drawFaceContour,
 //     drawIrises, loadDetectionModel,
 //     showFaceFuncs
-// } from "./tfjs/estimator";
+// } from "./utils/estimator";
 // import {filter, mergeMap} from "rxjs/operators";
 import {
     FaceMesh, FACEMESH_FACE_OVAL, FACEMESH_LEFT_EYE, FACEMESH_LEFT_EYEBROW, FACEMESH_LIPS,
@@ -15,7 +15,7 @@ import {
 } from "@mediapipe/face_mesh";
 import {drawConnectors} from "@mediapipe/drawing_utils";
 
-import {drawTraits, loadImages} from "./components/pixelCharacter";
+import {drawTraits, loadImages} from "../utils/pixelCharacterRenderer";
 
 import {Camera} from "@mediapipe/camera_utils"
 
